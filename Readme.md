@@ -2,7 +2,7 @@
 
 ## It's stupid
 
-As a seasoned developer, with over 20 years of commercial experience, I know that the so called "Vibe Coding" can't product production ready results.
+As a seasoned developer with over 20 years of commercial experience, I know that the so-called "Vibe Coding" can't produce production-ready results.
 
 ## It's fun
 
@@ -10,11 +10,11 @@ However, it's still fun to give it a try to find out what the fuss is about.
 
 ## Contents
 
-My attempts of creating things I need in my daily life / work / free time.
+My attempts at creating things I need in my daily life, work, and free time.
 
 ### Learn irregular verbs in English
 
-My son has to learn 100+ irregular verbs for his English classes. We've all been there. Hopefully, it may be a bit easier, given the right vibes.
+My son has to learn 100+ irregular verbs for his English classes. We've all been there. Hopefully, it might be a bit easier, given the right vibes.
 
 - Created with: Gemini 2.5 Pro Experimental 3-25. The context filled 156587 tokens.
 - Lesson learned:
