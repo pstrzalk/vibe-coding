@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Świnkowe Mnożenie - Nauka Tabliczki Mnożenia!</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+
+        :root {
+            --piggy-pink: #ffcde1;
+            --dark-pink: #f783ac;
+            --mud-brown: #8c5a4f;
+            --light-brown: #e0a99a;
+            --grass-green: #a8d8a0;
+            --sky-blue: #a2d2ff;
+            --text-dark: #4a3f35;
+            --white: #ffffff;
+            --success-green: #5cb85c;
+            --error-red: #d9534f;
+            --highlight-yellow: #fffacd; /* Lemon chiffon for highlight */
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--sky-blue);
+            background-image: linear-gradient(to bottom, var(--sky-blue) 70%, var(--grass-green) 100%);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            color: var(--text-dark);
+            overflow: hidden; /* Hide overflow for win screen/modal */
+        }
+
+        #game-container {
+            background-color: var(--white);
+            padding: 30px 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            border: 5px solid var(--mud-brown);
+            position: relative;
+            transition: transform 0.5s ease, opacity 0.5s ease;
+            overflow: visible; /* Allow modal shadow to potentially exceed */
+            z-index: 1; /* Base layer */
+        }
+
+        #game-container.hidden {
+            transform: scale(0.8);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            color: var(--dark-pink);
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .piggy-image {
+            width: 100px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        #question-area {
+            font-size: 2.0em;
+            font-weight: 700;
+            margin: 25px 0;
+            color: var(--mud-brown);
+             min-height: 3em;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+        }
+
+        #input-area {
+             margin-bottom: 20px; /* Space before feedback */
+        }
+
+        #answer-input {
+            padding: 12px 15px;
+            font-size: 1.5em;
+            border: 3px solid var(--light-brown);
+            border-radius: 10px;
+            margin-right: 10px;
+            width: 100px;
+            text-align: center;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            transition: border-color 0.3s ease;
+        }
+        #answer-input:focus { outline: none; border-color: var(--dark-pink); }
+
+        #submit-button {
+            padding: 12px 25px;
+            font-size: 1.5em;
+            font-weight: 700;
+            background-color: var(--dark-pink);
+            color: var(--white);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        #submit-button:hover { background-color: #e66a98; }
+        #submit-button:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        #feedback-area {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 700;
+            min-height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease, background-color 0.5s ease, color 0.5s ease;
+        }
+        #feedback-area.visible { opacity: 1; transform: translateY(0); }
+        #feedback-area.correct { background-color: #e8f5e9; color: var(--success-green); border: 2px solid var(--success-green); }
+        #feedback-area.incorrect { background-color: #ffebee; color: var(--error-red); border: 2px solid var(--error-red); }
+        .feedback-icon { font-size: 1.5em; margin-right: 10px; }
+
+        #score-area { margin-top: 20px; font-size: 1.1em; color: var(--mud-brown); }
+
+        /* --- Multiplication Table Modal --- */
+        #modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Above everything else */
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #modal-overlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        #modal-content {
+            background-color: var(--white);
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            max-width: 350px;
+            width: 85%;
+            text-align: center;
+            border: 4px solid var(--light-brown);
+            position: relative; /* For close button positioning */
+            max-height: 80vh; /* Prevent very long tables from overflowing */
+            overflow-y: auto; /* Add scroll if needed */
+        }
+
+        #modal-content h3 {
+            color: var(--mud-brown);
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+        }
+
+        #modal-table-content {
+            margin-bottom: 25px;
+            font-size: 1.3em;
+            line-height: 1.8;
+            text-align: center; /* Center the equations */
+        }
+
+        #modal-table-content div { /* Style each equation line */
+             padding: 4px 8px;
+             border-radius: 5px;
+             margin: 2px 0;
+             transition: background-color 0.3s ease;
+        }
+
+        .highlighted-equation {
+            background-color: var(--highlight-yellow);
+            font-weight: bold;
+            color: var(--text-dark); /* Ensure text is readable */
+            border: 1px solid #fad79f; /* Subtle border for highlight */
+        }
+
+        #modal-close-button {
+            background-color: var(--dark-pink);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            margin-top: 15px; /* Space from table */
+        }
+        #modal-close-button:hover { background-color: #e66a98; }
+        #modal-close-button:active { transform: translateY(1px); }
+
+
+        /* --- Win Screen Styles --- */
+         #win-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 205, 225, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; opacity: 0; visibility: hidden; transition: opacity 0.8s ease, visibility 0s linear 0.8s; z-index: 1000; /* Same level as modal overlay */ }
+         #win-screen.visible { opacity: 1; visibility: visible; transition: opacity 0.8s ease; backdrop-filter: blur(5px); }
+         #win-content { background: white; padding: 40px 50px; border-radius: 30px; box-shadow: 0 15px 30px rgba(0,0,0,0.2); border: 6px solid var(--dark-pink); transform: scale(0.5); transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55); }
+         #win-screen.visible #win-content { transform: scale(1); }
+         #win-screen h2 { color: var(--dark-pink); font-size: 3.0em; margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+         #win-screen p { font-size: 1.4em; color: var(--text-dark); margin-bottom: 20px; }
+         .win-piggy { width: 150px; margin-bottom: 20px; animation: bounce 1s infinite alternate ease-in-out; }
+         @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-15px); } }
+         #play-again-button { padding: 15px 35px; font-size: 1.6em; font-weight: 700; background-color: var(--grass-green); color: var(--white); border: none; border-radius: 15px; cursor: pointer; transition: background-color 0.3s ease, transform 0.1s ease; box-shadow: 0 5px 10px rgba(0,0,0,0.15); margin-top: 15px; }
+         #play-again-button:hover { background-color: #8bc983; }
+         #play-again-button:active { transform: translateY(2px); box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+
+         /* --- Confetti Styles (Unchanged) --- */
+         .confetti { position: absolute; width: 10px; height: 20px; background-color: #f00; opacity: 0.7; animation: fall 4s linear infinite; z-index: 1100; /* Above modal/win screen */ }
+         @keyframes fall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1;} 100% { transform: translateY(110vh) rotate(720deg); opacity: 0;} }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <h1>Świnkowe Mnożenie!</h1>
+        <!-- Main Pig SVG -->
+        <svg class="piggy-image" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"> <defs> <radialGradient id="pigGradient" cx="50%" cy="50%" r="50%" fx="30%" fy="30%"> <stop offset="0%" style="stop-color:#ffdae9;"/> <stop offset="100%" style="stop-color:#ffc1d7;"/> </radialGradient> <radialGradient id="snoutGradient" cx="50%" cy="50%" r="50%" fx="40%" fy="40%"> <stop offset="0%" style="stop-color:#ffa8c9;"/> <stop offset="100%" style="stop-color:#f783ac;"/> </radialGradient> </defs> <path d="M 25 30 A 15 15 0 0 1 40 15 L 45 35 Z" fill="url(#pigGradient)" stroke="#f783ac" stroke-width="1"/> <path d="M 75 30 A 15 15 0 0 0 60 15 L 55 35 Z" fill="url(#pigGradient)" stroke="#f783ac" stroke-width="1"/> <circle cx="50" cy="55" r="40" fill="url(#pigGradient)" stroke="#f783ac" stroke-width="1.5"/> <ellipse cx="50" cy="65" rx="18" ry="13" fill="url(#snoutGradient)" stroke="#f783ac" stroke-width="1"/> <circle cx="45" cy="65" r="2.5" fill="#6b4a43"/> <circle cx="55" cy="65" r="2.5" fill="#6b4a43"/> <circle cx="38" cy="48" r="4" fill="#4a3f35"/> <circle cx="62" cy="48" r="4" fill="#4a3f35"/> <circle cx="39" cy="47" r="1.5" fill="#ffffff"/> <circle cx="63" cy="47" r="1.5" fill="#ffffff"/> </svg>
+
+        <!-- Math Question and Input -->
+        <div id="question-area">Ile to jest 2 x 5?</div>
+        <div id="input-area">
+            <input type="number" id="answer-input" autofocus>
+            <button id="submit-button">Chrum!</button>
+        </div>
+
+        <div id="feedback-area"></div>
+        <div id="score-area">Poprawne: <span id="score">0</span> / <span id="target-score">10</span></div>
+    </div>
+
+    <!-- Multiplication Table Modal -->
+    <div id="modal-overlay">
+        <div id="modal-content">
+            <h3>Popatrz na tabliczkę mnożenia:</h3>
+            <div id="modal-table-content">
+                <!-- Table generated by JS -->
+            </div>
+            <button id="modal-close-button">Rozumiem!</button>
+        </div>
+    </div>
+
+
+    <!-- Win Screen -->
+    <div id="win-screen">
+        <div id="win-content">
+             <svg class="win-piggy piggy-image" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"> <defs> <radialGradient id="winPigGradient" cx="50%" cy="50%" r="50%" fx="30%" fy="30%"> <stop offset="0%" style="stop-color:#ffdae9;"/> <stop offset="100%" style="stop-color:#ffc1d7;"/> </radialGradient> <radialGradient id="winSnoutGradient" cx="50%" cy="50%" r="50%" fx="40%" fy="40%"> <stop offset="0%" style="stop-color:#ffa8c9;"/> <stop offset="100%" style="stop-color:#f783ac;"/> </radialGradient> </defs> <path d="M 25 25 A 15 15 0 0 1 40 10 L 45 30 Z" fill="url(#winPigGradient)" stroke="#f783ac" stroke-width="1"/> <path d="M 75 25 A 15 15 0 0 0 60 10 L 55 30 Z" fill="url(#winPigGradient)" stroke="#f783ac" stroke-width="1"/> <circle cx="50" cy="55" r="40" fill="url(#winPigGradient)" stroke="#f783ac" stroke-width="1.5"/> <ellipse cx="50" cy="65" rx="18" ry="13" fill="url(#winSnoutGradient)" stroke="#f783ac" stroke-width="1"/> <circle cx="45" cy="65" r="2.5" fill="#6b4a43"/> <circle cx="55" cy="65" r="2.5" fill="#6b4a43"/> <path d="M 35,45 A 5 5 0 0 1 45,45" stroke="#4a3f35" stroke-width="2.5" fill="none" stroke-linecap="round"/> <path d="M 65,45 A 5 5 0 0 0 55,45" stroke="#4a3f35" stroke-width="2.5" fill="none" stroke-linecap="round"/> </svg>
+            <h2>Chrumtastycznie! Wygrałaś!</h2>
+            <p>Jesteś mistrzynią mnożenia!</p>
+            <button id="play-again-button">Zagraj Ponownie?</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const gameContainer = document.getElementById('game-container');
+        const questionArea = document.getElementById('question-area');
+        const answerInput = document.getElementById('answer-input');
+        const submitButton = document.getElementById('submit-button');
+        const feedbackArea = document.getElementById('feedback-area');
+        const scoreDisplay = document.getElementById('score');
+        const targetScoreDisplay = document.getElementById('target-score');
+        const winScreen = document.getElementById('win-screen');
+        const playAgainButton = document.getElementById('play-again-button');
+
+        // Modal Elements
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalTableContent = document.getElementById('modal-table-content');
+        const modalCloseButton = document.getElementById('modal-close-button');
+
+        // Game State
+        let currentQuestion = {};
+        let score = 0;
+        const questionsToWin = 10;
+        const allowedMultipliers = [2, 3, 4, 5];
+        const numberRangeMin = 2;
+        const numberRangeMax = 10;
+
+        // --- Helper Functions ---
+        function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        function getRandomElement(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+        // --- Core Game Logic Functions ---
+        function generateQuestion() {
+            const num1 = getRandomElement(allowedMultipliers);
+            const num2 = getRandomInt(numberRangeMin, numberRangeMax);
+            const isNum1First = Math.random() > 0.5;
+
+            currentQuestion = { num1: isNum1First ? num1 : num2, num2: isNum1First ? num2 : num1, answer: num1 * num2 };
+
+            questionArea.textContent = `Ile to jest ${currentQuestion.num1} x ${currentQuestion.num2}?`;
+            answerInput.value = '';
+
+            // **MODIFICATION: Ensure focus with a slight delay**
+            // This helps ensure the element is ready and visible, especially after modal/transitions.
+            setTimeout(() => {
+                answerInput.focus();
+            }, 50); // Small delay like 50ms is usually enough
+
+            answerInput.disabled = false;
+            submitButton.disabled = false;
+            feedbackArea.classList.remove('visible'); // Hide previous feedback
+        }
+
+        function showFeedback(isCorrect, correctAnswer, showModalIfNeeded = false) {
+            feedbackArea.classList.remove('correct', 'incorrect', 'visible');
+            void feedbackArea.offsetWidth; // Reflow
+
+            let feedbackHTML = '';
+            const correctMessages = ["Chrumtastycznie! Zgadza się!", "Świnka w siódmym niebie!", "Super! Poprawna odpowiedź!", "Znakomicie! Masz rację!", "Hura! Dobra robota!"];
+            const incorrectMessages = ["Ups! Nie tym razem.", "Chrum! Sprawdź tabliczkę.", "Ojoj! Ćwicz dalej!", "Prawie, ale nie do końca.", "Pomyliłaś się troszkę."];
+
+            if (isCorrect) {
+                feedbackArea.classList.add('correct');
+                feedbackHTML = `<span class="feedback-icon">✓</span> ${getRandomElement(correctMessages)}`;
+                 feedbackArea.innerHTML = feedbackHTML;
+                 feedbackArea.classList.add('visible');
+                 // Proceed to next question or check win condition
+                 setTimeout(() => {
+                     if (score >= questionsToWin) {
+                         showWinScreen();
+                     } else {
+                         generateQuestion(); // Calls generateQuestion which handles focus
+                     }
+                 }, 1200); // Delay after correct feedback
+
+            } else {
+                feedbackArea.classList.add('incorrect');
+                feedbackHTML = `<span class="feedback-icon">✗</span> ${getRandomElement(incorrectMessages)} Poprawna odpowiedź to ${correctAnswer}.`;
+                feedbackArea.innerHTML = feedbackHTML;
+                feedbackArea.classList.add('visible');
+
+                // Show modal *after* feedback is visible
+                if (showModalIfNeeded) {
+                    setTimeout(() => {
+                        const baseNumber = Math.min(currentQuestion.num1, currentQuestion.num2);
+                        showMultiplicationTableModal(baseNumber, currentQuestion.num1, currentQuestion.num2);
+                    }, 800); // Delay showing modal slightly after feedback appears
+                } else {
+                    // If modal not needed (e.g., NaN input), just wait then generate next
+                    setTimeout(generateQuestion, 2000); // Longer delay for reading feedback
+                                                        // generateQuestion will handle focus
+                }
+            }
+        }
+
+        function updateScoreDisplay() {
+            scoreDisplay.textContent = score;
+            targetScoreDisplay.textContent = questionsToWin;
+        }
+
+        function checkAnswer() {
+            const userAnswer = parseInt(answerInput.value);
+            const isNumeric = !isNaN(userAnswer);
+
+            feedbackArea.classList.remove('visible'); // Hide old feedback immediately
+            answerInput.disabled = true;
+            submitButton.disabled = true;
+
+             // Short delay before processing & showing new feedback
+             setTimeout(() => {
+                let isCorrect = false;
+                if (isNumeric) {
+                    isCorrect = userAnswer === currentQuestion.answer;
+                    if (isCorrect) {
+                        score++;
+                        updateScoreDisplay();
+                    }
+                    // Show feedback, and if incorrect & numeric, request modal
+                    showFeedback(isCorrect, currentQuestion.answer, !isCorrect);
+                } else {
+                     // Treat non-numeric as incorrect, but don't show table modal
+                     showFeedback(false, currentQuestion.answer, false);
+                 }
+
+            }, 300); // Delay before showing feedback/modal logic starts
+        }
+
+
+        // --- Modal Functions ---
+        function showMultiplicationTableModal(baseNumber, failedNum1, failedNum2) {
+            modalTableContent.innerHTML = ''; // Clear previous table
+
+            for (let i = numberRangeMin; i <= numberRangeMax; i++) {
+                const equationDiv = document.createElement('div');
+                equationDiv.textContent = `${baseNumber} x ${i} = ${baseNumber * i}`;
+
+                const isFailedEquation = (baseNumber === failedNum1 && i === failedNum2) || (baseNumber === failedNum2 && i === failedNum1);
+                if (isFailedEquation) {
+                    equationDiv.classList.add('highlighted-equation');
+                    // Optional: Scroll the highlighted element into view if modal content is long
+                    // equationDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                modalTableContent.appendChild(equationDiv);
+            }
+
+            modalOverlay.classList.add('visible');
+            modalCloseButton.focus(); // Focus the close button for accessibility
+        }
+
+        function closeModal() {
+             modalOverlay.classList.remove('visible');
+             // Generate the next question AFTER the modal is closed
+             // Add a small delay to allow the modal fade-out transition
+             setTimeout(() => {
+                 generateQuestion(); // Calls generateQuestion which handles focus
+             }, 350); // Should match modal transition duration
+        }
+
+
+        // --- Win/Reset Functions ---
+        function showWinScreen() {
+            gameContainer.classList.add('hidden');
+            winScreen.classList.add('visible');
+            createConfetti();
+            answerInput.disabled = false;
+            submitButton.disabled = false;
+        }
+
+        function resetGame() {
+            score = 0;
+            updateScoreDisplay();
+            winScreen.classList.remove('visible');
+            clearConfetti();
+            modalOverlay.classList.remove('visible'); // Ensure modal is hidden on reset
+
+            setTimeout(() => {
+                gameContainer.classList.remove('hidden');
+                feedbackArea.classList.remove('visible', 'correct', 'incorrect');
+                generateQuestion(); // Start fresh, generateQuestion handles focus
+            }, 500);
+        }
+
+        // --- Confetti Functions (Unchanged) ---
+        const confettiColors = ['#ffcde1', '#f783ac', '#8c5a4f', '#a8d8a0', '#a2d2ff', '#ffd700'];
+        let confettiInterval;
+        function createConfetti() { clearConfetti(); const cC = 100; const wE = document.getElementById('win-screen'); for(let i=0; i<cC; i++) { const c=document.createElement('div'); c.classList.add('confetti'); c.style.left=Math.random()*100+'vw'; c.style.backgroundColor=getRandomElement(confettiColors); c.style.animationDuration=(Math.random()*2+3)+'s'; c.style.animationDelay=Math.random()*4+'s'; c.style.transform=`rotate(${Math.random()*360}deg) scale(${Math.random()*0.5+0.5})`; c.style.height=(Math.random()*10+10)+'px'; wE.appendChild(c); } confettiInterval=setTimeout(clearConfetti, 7000); }
+        function clearConfetti() { if(confettiInterval) clearTimeout(confettiInterval); const e=document.getElementById('win-screen'); const p=e.querySelectorAll('.confetti'); p.forEach(piece => piece.remove()); }
+
+
+        // --- Event Listeners ---
+        submitButton.addEventListener('click', checkAnswer);
+        answerInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') { event.preventDefault(); checkAnswer(); } });
+        playAgainButton.addEventListener('click', resetGame);
+        modalCloseButton.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', (event) => { if (event.target === modalOverlay) { closeModal(); } });
+         document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && modalOverlay.classList.contains('visible')) { closeModal(); } });
+
+        // --- Initialisation ---
+        updateScoreDisplay();
+        generateQuestion(); // Start the game
+
+    </script>
+</body>
+</html>
