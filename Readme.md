@@ -38,3 +38,20 @@ My daughter has to learn the multiplication table and she's not happy... I asked
 
 ![Piggy Multiplication Image 1](/vibes/images/piggy-multiplication-image1.jpeg)
 ![Piggy Multiplication Image 2](/vibes/images/piggy-multiplication-image2.jpeg)
+
+### Save a Wolf
+
+A 3D adventure game for learning the multiplication table. The goal is to save a wolf trapped on top of a tower by answering multiplication questions correctly.
+
+- **Game mechanics**:
+  - Collect one yellow box and one cyan box to be given a multiplication question
+  - Answer multiplication questions to lower the tower with the wolf
+  - Each correct answer lowers the tower
+  - Each wrong answer raises it back up
+  - Pull the tower all the way to the ground, then answer one more question and approach the wolf to save it
+- Created with: Gemini 2.5 Pro. The context filled 40028 tokens.
+- Technology: ThreeJS for 3D graphics and physics
+- Source: [/vibes/save-a-wolf.html](/vibes/save-a-wolf.html) - download the HTML and run it in your browser
+
+![Save a Wolf Image 1](/vibes/images/save-a-wolf-image1.jpeg)
+![Save a Wolf Image 2](/vibes/images/save-a-wolf-image2.jpeg)

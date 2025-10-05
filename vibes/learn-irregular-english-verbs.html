@@ -239,7 +239,35 @@
         const lostPastParticiple = document.getElementById('lostPastParticiple');
 
 
-        const verbs = { "awake": ["Budzić się", "Awake", "Awoke", "Awoken"], "be": ["Być", "Be", "Was", "Been"], "bear": ["Nosić", "Bear", "Bore", "Borne"], "beat": ["Bić", "Beat", "Beat", "Beaten"], "become": ["Stawać się", "Become", "Became", "Become"], "begin": ["Zaczynać się", "Begin", "Began", "Begun"], "bend": ["Giąć", "Bend", "Bent", "Bent"] };
+        const verbs = {
+            "awake": ["obudzić, wzbudzić", "awake", "awoke", "awoken"],
+    "be": ["być", "be", "was", "been"], // Note: 'were' is also a past form but the structure holds one. 'was' is often listed first.
+    "become": ["stawać się", "become", "became", "become"],
+    "begin": ["zaczynać", "begin", "began", "begun"],
+    "bite": ["gryźć", "bite", "bit", "bitten"],
+    "blow": ["dmuchać, wiać", "blow", "blew", "blown"],
+    "break": ["łamać", "break", "broke", "broken"],
+    "bring": ["przynosić", "bring", "brought", "brought"],
+    "build": ["budować", "build", "built", "built"],
+    "burn": ["płonąć, palić się", "burn", "burnt", "burnt"], // Taking 'burnt' as the primary listed form
+    "buy": ["kupować", "buy", "bought", "bought"],
+    "catch": ["łapać", "catch", "caught", "caught"],
+    "choose": ["wybierać", "choose", "chose", "chosen"],
+    "come": ["przychodzić, przybywać", "come", "came", "come"],
+    "cost": ["kosztować", "cost", "cost", "cost"],
+    "cut": ["ciąć", "cut", "cut", "cut"],
+    "do": ["robić", "do", "did", "done"],
+    "draw": ["rysować, ciągnąć", "draw", "drew", "drawn"],
+    "dream": ["śnić, marzyć", "dream", "dreamt", "dreamt"], // Taking 'dreamt' as the primary listed form
+    "drink": ["pić", "drink", "drank", "drunk"],
+    "drive": ["jechać", "drive", "drove", "driven"],
+    "eat": ["jeść", "eat", "ate", "eaten"],
+    "fall": ["upadać, przewracać się", "fall", "fell", "fallen"],
+    "feed": ["karmić", "feed", "fed", "fed"],
+    "feel": ["czuć", "feel", "felt", "felt"]
+};
+
+
         const verbKeys = Object.keys(verbs);
 
         // Player

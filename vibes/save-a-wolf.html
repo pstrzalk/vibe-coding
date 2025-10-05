@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Wolf Rescue Adventure</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            font-family: monospace;
+        }
+        #game-ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            z-index: 100;
+            min-width: 250px;
+        }
+        #question-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 101;
+        }
+        #question-container input {
+            padding: 10px;
+            font-size: 1.2em;
+            margin: 10px;
+            width: 80px;
+            text-align: center;
+        }
+        #question-container button {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+        #win-message {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4em;
+            text-shadow: 2px 2px 8px #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-ui">
+        <div>Controls: Arrow Keys (Move), Spacebar (Jump)</div>
+        <div>Find one <span style="color:yellow;">Yellow</span> (4-9) and one <span style="color:cyan;">Cyan</span> (2-5) cube.</div>
+        <div id="info">Collected: None</div>
+        <div>Tower Height: <span id="tower-height-display"></span></div>
+    </div>
+
+    <div id="question-container">
+        <h2 id="question-text"></h2>
+        <input type="number" id="answer-input" />
+        <button id="submit-answer">Submit</button>
+    </div>
+
+    <div id="win-message">YOU SAVED THE WOLF!</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- GAME CONSTANTS ---
+        const WORLD_SIZE = 200;
+        const HERO_SPEED = 20;
+        const HERO_TURN_SPEED = Math.PI * 0.8;
+        const HERO_GROUND_Y = 1;
+        const JUMP_FORCE = 8;
+        const GRAVITY = 20;
+        const NUM_TREES = 150;
+        const NUM_ROCKS = 50;
+        const NUM_HOUSES = 10;
+        const NUM_COLLECTIBLES = 60;
+        const TOWER_INITIAL_HEIGHT = 20;
+        const TOWER_RADIUS = 4;
+        const TOWER_STEP = 4;
+        const GROUND_LEVEL = 0;
+
+        // --- SCENE SETUP ---
+        let scene, camera, renderer, clock, hero;
+        let ambientLight, directionalLight;
+        let tower, wolf;
+
+        // --- GAME STATE ---
+        let keys = {};
+        let heroVelocityY = 0;
+        let collectedNumbers = { numA: null, numB: null };
+        let collectibleObjects = [];
+        let currentTowerHeight = TOWER_INITIAL_HEIGHT;
+        let targetTowerHeight = TOWER_INITIAL_HEIGHT;
+        let gameActive = true;
+
+        // --- UI ELEMENTS ---
+        const infoUI = document.getElementById('info');
+        const questionContainer = document.getElementById('question-container');
+        const questionText = document.getElementById('question-text');
+        const answerInput = document.getElementById('answer-input');
+        const submitAnswerBtn = document.getElementById('submit-answer');
+        const towerHeightDisplay = document.getElementById('tower-height-display');
+        const winMessage = document.getElementById('win-message');
+
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.Fog(0x87ceeb, 50, WORLD_SIZE / 1.5);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            clock = new THREE.Clock();
+
+            // --- CREATE WORLD ---
+            createLights();
+            createGround();
+            createHero();
+            createTowerAndWolf();
+            populateWorld();
+            createCollectibles();
+
+            // --- EVENT LISTENERS ---
+            document.addEventListener('keydown', (e) => keys[e.code] = true);
+            document.addEventListener('keyup', (e) => keys[e.code] = false);
+            window.addEventListener('resize', onWindowResize);
+            submitAnswerBtn.addEventListener('click', checkAnswer);
+            answerInput.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') checkAnswer();
+            });
+
+            animate();
+        }
+
+        function createLights() {
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            directionalLight.position.set(50, 80, 20);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.left = -WORLD_SIZE/2;
+            directionalLight.shadow.camera.right = WORLD_SIZE/2;
+            directionalLight.shadow.camera.top = WORLD_SIZE/2;
+            directionalLight.shadow.camera.bottom = -WORLD_SIZE/2;
+            scene.add(directionalLight);
+        }
+
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE);
+            const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x55aa55, side: THREE.DoubleSide });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+        }
+
+        function createHero() {
+            const heroGeometry = new THREE.CapsuleGeometry(0.5, 1, 4, 16);
+            const heroMaterial = new THREE.MeshStandardMaterial({ color: 0xff4444 });
+            hero = new THREE.Mesh(heroGeometry, heroMaterial);
+            hero.position.set(0, HERO_GROUND_Y, 15);
+            hero.castShadow = true;
+            scene.add(hero);
+        }
+
+        function createTowerAndWolf() {
+            const towerGeometry = new THREE.CylinderGeometry(TOWER_RADIUS, TOWER_RADIUS, TOWER_INITIAL_HEIGHT, 16);
+            const towerMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+            tower = new THREE.Mesh(towerGeometry, towerMaterial);
+            tower.position.set(0, TOWER_INITIAL_HEIGHT / 2, -50);
+            tower.castShadow = true;
+            tower.receiveShadow = true;
+            scene.add(tower);
+
+            const wolfGeometry = new THREE.BoxGeometry(1, 1, 1.5);
+            const wolfMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+            wolf = new THREE.Mesh(wolfGeometry, wolfMaterial);
+            wolf.castShadow = true;
+            scene.add(wolf);
+            updateWolfPosition();
+        }
+
+        function populateWorld() {
+            for (let i = 0; i < NUM_TREES; i++) {
+                const tree = createTree();
+                placeObjectAtRandom(tree);
+                scene.add(tree);
+            }
+            for (let i = 0; i < NUM_ROCKS; i++) {
+                const rock = createRock();
+                placeObjectAtRandom(rock);
+                scene.add(rock);
+            }
+            for(let i = 0; i < NUM_HOUSES; i++) {
+                const house = createHouse();
+                placeObjectAtRandom(house);
+                scene.add(house);
+            }
+        }
+
+        function createTree() {
+            const tree = new THREE.Group();
+            const trunkHeight = Math.random() * 4 + 2;
+            const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, trunkHeight, 8);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = trunkHeight / 2;
+            trunk.castShadow = true;
+            const leavesHeight = Math.random() * 3 + 2;
+            const leavesGeo = new THREE.ConeGeometry(1.5, leavesHeight, 8);
+            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+            leaves.position.y = trunkHeight + leavesHeight / 2 - 0.5;
+            leaves.castShadow = true;
+            tree.add(trunk);
+            tree.add(leaves);
+            return tree;
+        }
+
+        function createRock() {
+            const rockSize = Math.random() * 1.5 + 0.5;
+            const rockGeo = new THREE.DodecahedronGeometry(rockSize, 0);
+            const rockMat = new THREE.MeshStandardMaterial({ color: 0x999999 });
+            const rock = new THREE.Mesh(rockGeo, rockMat);
+            rock.castShadow = true;
+            rock.position.y = rockSize / 2 - 0.2;
+            return rock;
+        }
+
+        function createHouse() {
+            const house = new THREE.Group();
+            const baseWidth = Math.random() * 4 + 4;
+            const baseDepth = Math.random() * 4 + 4;
+            const baseHeight = 2.5;
+            const baseGeo = new THREE.BoxGeometry(baseWidth, baseHeight, baseDepth);
+            const baseMat = new THREE.MeshStandardMaterial({color: 0xffe4c4});
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = baseHeight / 2;
+            base.castShadow = true;
+            const roofGeo = new THREE.ConeGeometry(Math.max(baseWidth, baseDepth) * 0.7, 2, 4);
+            const roofMat = new THREE.MeshStandardMaterial({color: 0xa0522d});
+            const roof = new THREE.Mesh(roofGeo, roofMat);
+            roof.position.y = baseHeight + 0.9;
+            roof.rotation.y = Math.PI / 4;
+            roof.castShadow = true;
+            house.add(base);
+            house.add(roof);
+            return house;
+        }
+
+        function placeObjectAtRandom(obj) {
+            let placed = false;
+            while(!placed) {
+                const x = Math.random() * (WORLD_SIZE - 20) - (WORLD_SIZE / 2 - 10);
+                const z = Math.random() * (WORLD_SIZE - 20) - (WORLD_SIZE / 2 - 10);
+                const distToCenter = Math.sqrt(x*x + z*z);
+                const distToTower = Math.sqrt(Math.pow(x - tower.position.x, 2) + Math.pow(z - tower.position.z, 2));
+
+                if(distToCenter > 20 && distToTower > 15) {
+                    obj.position.x = x;
+                    obj.position.z = z;
+                    placed = true;
+                }
+            }
+        }
+
+        function createCollectibles() {
+            const collectibleGeometry = new THREE.BoxGeometry(1, 1, 1);
+
+            // Type A: Yellow, value 4-9
+            const materialA = new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 0.5 });
+            for (let i = 0; i < NUM_COLLECTIBLES / 2; i++) {
+                const collectible = new THREE.Mesh(collectibleGeometry, materialA);
+                collectible.castShadow = true;
+                collectible.userData.value = Math.floor(Math.random() * 6) + 4; // Value 4-9
+                collectible.userData.type = 'A';
+                placeObjectAtRandom(collectible);
+                collectible.position.y = 1.5;
+                scene.add(collectible);
+                collectibleObjects.push(collectible);
+            }
+
+            // Type B: Cyan, value 2-5
+            const materialB = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.5 });
+            for (let i = 0; i < NUM_COLLECTIBLES / 2; i++) {
+                const collectible = new THREE.Mesh(collectibleGeometry, materialB);
+                collectible.castShadow = true;
+                collectible.userData.value = Math.floor(Math.random() * 4) + 2; // Value 2-5
+                collectible.userData.type = 'B';
+                placeObjectAtRandom(collectible);
+                collectible.position.y = 1.5;
+                scene.add(collectible);
+                collectibleObjects.push(collectible);
+            }
+        }
+
+        function updateHero(delta) {
+            // Horizontal Movement
+            const moveSpeed = HERO_SPEED * delta;
+            const turnSpeed = HERO_TURN_SPEED * delta;
+
+            if (keys['ArrowUp'] || keys['KeyW']) {
+                hero.position.x -= Math.sin(hero.rotation.y) * moveSpeed;
+                hero.position.z -= Math.cos(hero.rotation.y) * moveSpeed;
+            }
+            if (keys['ArrowDown'] || keys['KeyS']) {
+                hero.position.x += Math.sin(hero.rotation.y) * moveSpeed;
+                hero.position.z += Math.cos(hero.rotation.y) * moveSpeed;
+            }
+            if (keys['ArrowLeft'] || keys['KeyA']) {
+                hero.rotation.y += turnSpeed;
+            }
+            if (keys['ArrowRight'] || keys['KeyD']) {
+                hero.rotation.y -= turnSpeed;
+            }
+
+            // Vertical Movement (Jumping & Gravity)
+            if (keys['Space'] && hero.position.y <= HERO_GROUND_Y) {
+                heroVelocityY = JUMP_FORCE;
+            }
+
+            heroVelocityY -= GRAVITY * delta;
+            hero.position.y += heroVelocityY * delta;
+
+            if (hero.position.y < HERO_GROUND_Y) {
+                hero.position.y = HERO_GROUND_Y;
+                heroVelocityY = 0;
+            }
+
+            // World Boundaries
+            hero.position.x = Math.max(-WORLD_SIZE/2, Math.min(WORLD_SIZE/2, hero.position.x));
+            hero.position.z = Math.max(-WORLD_SIZE/2, Math.min(WORLD_SIZE/2, hero.position.z));
+        }
+
+        function updateCamera() {
+            const offset = new THREE.Vector3(0, 4, 7);
+            offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), hero.rotation.y);
+
+            const cameraTargetPosition = hero.position.clone().add(offset);
+            camera.position.lerp(cameraTargetPosition, 0.1);
+
+            const lookAtTarget = hero.position.clone().add(new THREE.Vector3(0, 1, 0));
+            camera.lookAt(lookAtTarget);
+        }
+
+        function checkCollisions() {
+            for (let i = collectibleObjects.length - 1; i >= 0; i--) {
+                const collectible = collectibleObjects[i];
+                const distance = hero.position.distanceTo(collectible.position);
+
+                if (distance < 1.5) {
+                    let collectedSomething = false;
+                    if (collectible.userData.type === 'A' && collectedNumbers.numA === null) {
+                        collectedNumbers.numA = collectible.userData.value;
+                        collectedSomething = true;
+                    } else if (collectible.userData.type === 'B' && collectedNumbers.numB === null) {
+                        collectedNumbers.numB = collectible.userData.value;
+                        collectedSomething = true;
+                    }
+
+                    if(collectedSomething){
+                        scene.remove(collectible);
+                        collectibleObjects.splice(i, 1);
+
+                        let parts = [];
+                        if (collectedNumbers.numA !== null) parts.push(`Yellow: ${collectedNumbers.numA}`);
+                        if (collectedNumbers.numB !== null) parts.push(`Cyan: ${collectedNumbers.numB}`);
+                        infoUI.textContent = `Collected: ${parts.join(' & ')}`;
+
+                        if (collectedNumbers.numA !== null && collectedNumbers.numB !== null) {
+                            askQuestion();
+                        }
+                    }
+                }
+            }
+        }
+
+        function checkWinCondition() {
+            if (targetTowerHeight <= GROUND_LEVEL && hero.position.y <= HERO_GROUND_Y) {
+                const distToTower = hero.position.distanceTo(
+                    new THREE.Vector3(tower.position.x, hero.position.y, tower.position.z)
+                );
+
+                if (distToTower < TOWER_RADIUS + 1) {
+                    gameActive = false;
+                    winMessage.style.display = 'block';
+                    infoUI.textContent = "You win!";
+                }
+            }
+        }
+
+        function askQuestion() {
+            gameActive = false;
+            const { numA, numB } = collectedNumbers;
+            questionText.textContent = `What is ${numA} x ${numB} ?`;
+            questionContainer.style.display = 'block';
+            answerInput.value = '';
+            answerInput.focus();
+        }
+
+        function checkAnswer() {
+            const { numA, numB } = collectedNumbers;
+            const correctAnswer = numA * numB;
+            const userAnswer = parseInt(answerInput.value, 10);
+
+            if (userAnswer === correctAnswer) {
+                targetTowerHeight = Math.max(GROUND_LEVEL, currentTowerHeight - TOWER_STEP);
+                infoUI.textContent = `Correct! Find another pair.`;
+            } else {
+                targetTowerHeight = Math.min(TOWER_INITIAL_HEIGHT * 2, currentTowerHeight + TOWER_STEP);
+                infoUI.textContent = `Incorrect. Find another pair.`;
+            }
+
+            collectedNumbers = { numA: null, numB: null }; // Reset
+            questionContainer.style.display = 'none';
+            gameActive = true;
+        }
+
+        function updateTower(delta) {
+            if (Math.abs(currentTowerHeight - targetTowerHeight) > 0.01) {
+                currentTowerHeight = THREE.MathUtils.lerp(currentTowerHeight, targetTowerHeight, delta * 2);
+                tower.scale.y = currentTowerHeight / TOWER_INITIAL_HEIGHT;
+                tower.position.y = currentTowerHeight / 2;
+                updateWolfPosition();
+            }
+            towerHeightDisplay.textContent = currentTowerHeight.toFixed(1);
+        }
+
+        function updateWolfPosition() {
+            const towerGeoHeight = tower.geometry.parameters.height;
+            const currentActualHeight = towerGeoHeight * tower.scale.y;
+            wolf.position.y = tower.position.y + currentActualHeight / 2 + 0.5;
+            wolf.position.x = tower.position.x;
+            wolf.position.z = tower.position.z;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (gameActive) {
+                updateHero(delta);
+                checkCollisions();
+                checkWinCondition();
+            }
+
+            collectibleObjects.forEach(c => {
+                c.rotation.y += delta * 1.5;
+                c.rotation.x += delta * 0.5;
+            });
+
+            updateTower(delta);
+            updateCamera();
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
